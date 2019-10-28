@@ -1,0 +1,894 @@
+function ComboCheckbox()
+{   
+    //Transforma um elemento DOM do tipo select em um combo com checkboxes.
+    //Modo de utilização:
+    // Colocar no xhtml um elemento dom <select 'atributos'> com atributos id e name obrigatórios e opcionalmente especificando os atributos: 
+    //  style="width: Xpx" -> será o width do novo combo
+    //  filtro="false" -> força não colocar o campo para filtrar os elementos dentro do combo
+    //  labelVazio="Selecione..." -> indica qual o texto irá aparecer quando nenhuma checkbox for selecionada. Caso seja informado um option com value vazio na construção do select, esse atributo será sobrescrito pelo texto desse option.
+    //  onchange="function()" -> executa a função informada, quando 'fechar' a div das checkboxes caso os valores tenham sido alterados.
+    //Utilizar a chamada oGenericas.transformaComboCheckBox('idCombo') para transformar o combo select no novo combo checkbox.
+    //O combo select original pode já estar populado antes de usar a chamada, ou utilizar oGenericas.popularComboCheckbox(oXml, 'idCombo') para popular depois de transformar
+    //Após transformar em combo checkbox, o novo elemento do id especificado será um input hidden, com os métodos e atributos abaixo:
+    //Atributos:
+    // .value = values dos checkboxes selecionados separados por ';'
+    // .text = texto dos checkboxes selecionados, separados por vírgula (como exibido na tela)
+    //Funções:
+    // .setarValores(valores) = marca todas as checkboxes com os values passados por parâmetro (separados por ';')
+    // .limpar() = desmarca todas checkboxes
+    // .desabilitar() e habilitar() = seta o combo como disabled true ou false, respectivamente
+    // .removerTodos(label) = remove todas as checkboxes, e subtitui o texto de combo vazio pelo parâmetro passado
+    // .adicionar(valor, texto, atributos) = adiciona um novo checkbox no combo, mais atributos opcionais
+    // .filtrarAtributo(atributo, filtros) = oculta todos os checkboxes cujo valor do atributo determinado não corresponte aos filtros passados por parâmetro (separados por ';')
+    // .marcarAtributo(atributo, valores) = marca todas checkboxes cujo atributo seja igual aos valores passado por parâmetro (separados por ';').
+    this.transformaComboCheckBox = transformaComboCheckBox;
+    function transformaComboCheckBox(idCombo)
+    {
+        var ie7 = false;
+        if (typeof jQuery === 'undefined')
+        {
+            ie7 = true;
+        }
+        var combo = document.getElementById(idCombo);
+        var possuiFiltro = combo.getAttribute('filtro') !== 'false';
+        var checkboxes =[];
+
+        var inputHidden = document.createElement('input');
+        inputHidden.type = 'hidden';
+        inputHidden.id = combo.id;
+        inputHidden.name = combo.id;
+        inputHidden.setAttribute('labelVazio', 'Indiferente');
+
+        if (combo.getAttribute('labelVazio') !== undefined)
+        {
+            inputHidden.setAttribute('labelVazio', combo.getAttribute('labelVazio'));
+        }
+
+        var fakeComboDiv = document.createElement('div');
+        fakeComboDiv.id = combo.id + '_fakediv';
+        if (ie7)
+        {
+            fakeComboDiv.style.display = 'inline-block';
+            fakeComboDiv.style.borderTop = '#696969 2px solid';
+            fakeComboDiv.style.borderRight = '#E3E3E3 2px solid';
+            fakeComboDiv.style.borderBottom = '#E3E3E3 2px solid';
+            fakeComboDiv.style.borderLeft = '#696969 2px solid';
+        }
+        else
+        {
+            fakeComboDiv.style.display = 'inline-flex';
+            fakeComboDiv.style.backgroundColor = 'white';
+            fakeComboDiv.style.height = '23px';
+            fakeComboDiv.style.fontFamily = 'FontAwesome, "Font Awesome 5 Free", Verdana, Arial';
+            fakeComboDiv.style.color = '#616161';
+            fakeComboDiv.style.fontSize = '12px';
+        }
+        fakeComboDiv.style.overflow = 'hidden';
+        if (combo.style.width === '' || combo.style.width.substr(combo.style.width.length - 1, combo.style.width.length) === '%')
+        {
+            fakeComboDiv.setAttribute('tamanho', 'dinamico');
+            var offsetW = combo.offsetWidth;
+            if (offsetW === 0 && combo.parentElement.tagName === 'TD')
+            {
+                var domsStyleAlterados =[];
+                while (combo.offsetWidth === 0)
+                {
+                    var dom = combo;
+                    while (dom.style.display !== 'none')
+                    {
+                        dom = dom.parentElement;
+                    }
+                    domsStyleAlterados.push(dom);
+                    dom.style.display = 'block';
+                }
+                offsetW = combo.offsetWidth;
+                for (var i = 0; i < domsStyleAlterados.length; i++)
+                {
+                    domsStyleAlterados[i].style.display = 'none';
+                }
+            }
+            if (combo.style.width === '' && offsetW > 250)
+            {
+                offsetW += 15;
+            }
+            inputHidden.setAttribute('intWidth', offsetW);
+        }
+        else
+        {
+            inputHidden.setAttribute('intWidth', combo.style.width.substr(0, combo.style.width.length - 2));
+        }
+        var inputText = document.createElement('input');
+        if (!ie7 && combo.style.width.substr(combo.style.width.length - 1, combo.style.width.length) === '%')
+        {
+            fakeComboDiv.style.width = combo.style.width;
+            inputText.style.width = '100%';
+        }
+        else
+        {
+            fakeComboDiv.style.width = inputHidden.getAttribute('intWidth');
+            if (ie7)
+            {
+                inputText.style.width = inputHidden.getAttribute('intWidth') - 23;
+            }
+        }
+        inputText.type = 'text';
+        inputText.id = combo.id + '_text';
+        inputText.readOnly = 'readonly';
+        inputText.style.float = 'left';
+        inputText.style.overflow = 'hidden';
+        inputText.style.whiteSpace = 'nowrap';
+        inputText.style.lineHeight = '14px';
+        inputText.style.fontFamily = 'Verdana';
+        inputText.style.fontSize = '12px';
+        inputText.style.cursor = 'default';
+        inputText.style.boxShadow = 'none';
+        inputText.value = inputHidden.getAttribute('labelVazio');
+        if (ie7)
+        {
+            inputText.style.border = 'none';
+            inputText.style.height = '16px';
+            inputText.style.padding = '0 0 0 2px';
+        }
+        else
+        {
+            inputText.style.border = '1px solid #92a1ac';
+            inputText.style.width = '100%';
+            inputText.style.height = '100%';
+            inputText.style.padding = '0 0 0 12px';
+        }
+        fakeComboDiv.appendChild(inputText);
+
+        var miniButton = document.createElement('input');
+        miniButton.type = 'button';
+        if (ie7)
+        {
+            miniButton.style.width = '19px';
+            miniButton.style.height = '16px';
+            miniButton.style.margin = '0';
+        }
+        else
+        {
+            miniButton.style.width = '19px';
+            miniButton.style.height = '14px';
+            miniButton.style.marginTop = '5px';
+            miniButton.style.marginLeft = '-20px';
+            miniButton.style.position = 'absolute';
+        }
+        miniButton.style.fontSize = '6px';
+        miniButton.style.fontWeight = 'bold';
+        miniButton.style.fontFamily = 'Comic Sans MS';
+        miniButton.style.backgroundColor = '#F0F0F0';
+        miniButton.style.borderTop = '#9f9fa0 1px solid';
+        miniButton.style.borderRight = '#696969 1px solid';
+        miniButton.style.borderBottom = '#696969 1px solid';
+        miniButton.style.borderLeft = '#9f9fa0 1px solid';
+        miniButton.style.padding = '1px';
+        miniButton.style.float = 'right';
+        miniButton.style.cursor = 'default';
+        miniButton.value = '...';
+
+        fakeComboDiv.appendChild(inputHidden);
+
+        inputHidden.onchange = null;
+        if (combo.onchange)
+        {
+            inputHidden.onchange = combo.onchange;
+        }
+
+        var divCheckBoxes = document.createElement('div');
+        divCheckBoxes.id = combo.id + '_divCheckboxes';
+        divCheckBoxes.style.maxHeight = '420px';
+        var funcCloseDiv = function()
+        {
+            if (ie7)
+            {
+                fakeComboDiv.style.borderTop = '#696969 2px solid';
+                fakeComboDiv.style.borderRight = '#E3E3E3 2px solid';
+                fakeComboDiv.style.borderBottom = '#E3E3E3 2px solid';
+                fakeComboDiv.style.borderLeft = '#696969 2px solid';
+                fakeComboDiv.style.padding = '';
+                fakeComboDiv.style.height = '';
+                inputText.style.position = 'relative';
+                inputText.style.width = inputHidden.getAttribute('intWidth') - 23;
+                divCheckBoxes.style.display = 'none';
+                miniButton.style.display = '';
+            }
+            else
+            {
+                $(divCheckBoxes).animate({ height: 'hide' }, 150, function() {
+                    inputText.style.border = '1px solid #92a1ac';
+                    inputText.style.borderRadius = '3px';
+                    inputText.style.position = 'relative';
+                    inputText.style.height = '100%';
+                    inputText.style.width = '100%';
+                    miniButton.style.display = '';
+                });
+            }
+            if (inputHidden.onchange !== null && inputText.getAttribute('valorInicial') !== inputHidden.value)
+            {
+                inputHidden.onchange();
+            }
+        };
+        var funcOpenDiv = function()
+        {
+            if (!inputText.disabled)
+            {
+                divCheckBoxes.style.display = 'block';
+                divCheckBoxes.style.width = '';
+                miniButton.style.display = 'none';
+                inputText.setAttribute('valorInicial', inputHidden.value);
+                if (ie7)
+                {
+                    if (divCheckBoxes.offsetWidth < inputHidden.getAttribute('intWidth'))
+                    {
+                        divCheckBoxes.style.width = inputHidden.getAttribute('intWidth');
+                    }
+                    fakeComboDiv.style.borderTop = 'black 1px solid';
+                    fakeComboDiv.style.borderRight = 'black 1px solid';
+                    fakeComboDiv.style.borderBottom = 0;
+                    fakeComboDiv.style.borderLeft = 'black 1px solid';
+                    fakeComboDiv.style.paddingTop = 1;
+                    fakeComboDiv.style.paddingBottom = 1;
+                    fakeComboDiv.style.paddingLeft = 1;
+                    fakeComboDiv.style.height = fakeComboDiv.offsetHeight + 1;
+                    inputText.style.width = inputHidden.getAttribute('intWidth') - 4;
+                    if (+inputHidden.getAttribute('opcoesVisiveis') > 30)
+                    {
+                        divCheckBoxes.style.height = 420;
+                        divCheckBoxes.style.overflowY = 'scroll';
+                    }
+                    else
+                    {
+                        divCheckBoxes.style.height = '';
+                        divCheckBoxes.style.overflowY = 'auto';
+                    }
+                    if (possuiFiltro)
+                    {
+                        document.getElementById(combo.id + '_filtro').focus();
+                    }
+                }
+                else
+                {
+                    divCheckBoxes.style.width = +divCheckBoxes.offsetWidth - 4;
+                    if (divCheckBoxes.offsetWidth < inputText.offsetWidth)
+                    {
+                        divCheckBoxes.style.width = +inputText.offsetWidth - 4;
+                    }
+                    inputText.style.borderTop = 'black 2px solid';
+                    inputText.style.borderRight = 'black 2px solid';
+                    inputText.style.borderBottom = 0;
+                    inputText.style.borderLeft = 'black 2px solid';
+                    inputText.style.borderRadius = 0;
+
+                    if (inputText.offsetWidth < divCheckBoxes.offsetWidth)
+                    {
+                        inputText.style.height = '23px';
+                        inputText.style.width = divCheckBoxes.offsetWidth +'px';
+                        inputText.style.position = 'absolute';
+                    }
+                    if (+inputHidden.getAttribute('opcoesVisiveis') > 30)
+                    {
+                        divCheckBoxes.style.overflowY = 'scroll';
+                    }
+                    else
+                    {
+                        divCheckBoxes.style.overflowY = '';
+                    }
+                    var hg = +divCheckBoxes.offsetHeight-2;
+                    divCheckBoxes.style.height = 0;
+                    $(divCheckBoxes).animate({ height: hg+ 'px' }, 150, function() {
+                        divCheckBoxes.style.height = '';
+                        if (possuiFiltro)
+                        {
+                            document.getElementById(combo.id + '_filtro').focus();
+                        }
+                    });
+                }
+            }
+        };
+        fakeComboDiv.onclick = function()
+        {
+            if (divCheckBoxes.style.display === 'none')
+            {
+                funcOpenDiv();
+            }
+            else
+            {
+                funcCloseDiv();
+            }
+        };
+        fakeComboDiv.appendChild(miniButton);
+
+        if (possuiFiltro)
+        {
+            var inputFiltro = document.createElement('input');
+            inputFiltro.type = 'text';
+            inputFiltro.style.border = '#E3E3E3 1px solid';
+            inputFiltro.style.fontSize = 11;
+            inputFiltro.id = combo.id + '_filtro';
+            if (ie7)
+            {
+                if (inputHidden.getAttribute('intWidth') < 120)
+                {
+                    inputFiltro.style.width = inputHidden.getAttribute('intWidth') / 2;
+                }
+            }
+            else
+            {
+                if (inputHidden.getAttribute('intWidth') < 190)
+                {
+                    inputFiltro.style.width = inputHidden.getAttribute('intWidth') / 2;
+                }
+            }
+            var funcPesquisa = function()
+            {
+                var filtro = inputFiltro.value.toUpperCase();
+                if (filtro === '')
+                {
+                    for (var i = 0; i < checkboxes.length; i++)
+                    {
+                        if (checkboxes[i].disabled === false)
+                        {
+                            checkboxes[i].parentElement.style.display = 'block';
+                        }
+                    }
+                }
+                else
+                {
+                    for (var i = 0; i < checkboxes.length; i++)
+                    {
+                        if (checkboxes[i].disabled === false && checkboxes[i].getAttribute('upper').indexOf(filtro) > -1)
+                        {
+                            checkboxes[i].parentElement.style.display = 'block';
+                        }
+                        else
+                        {
+                            checkboxes[i].parentElement.style.display = 'none';
+                        }
+                    }
+                }
+            };
+            inputFiltro.onkeyup = funcPesquisa;
+            inputFiltro.onblur = funcPesquisa;
+
+            var spanFiltro = document.createElement('span');
+            spanFiltro.style.paddingLeft = 5;
+            spanFiltro.style.color = 'black';
+            spanFiltro.style.fontSize = 11;
+            spanFiltro.style.display = 'block';
+            var btnLimparFiltro = document.createElement('input');
+            btnLimparFiltro.type = 'button';
+            btnLimparFiltro.value = 'X';
+            btnLimparFiltro.style.margin = '0';
+            btnLimparFiltro.style.color = 'gray';
+            btnLimparFiltro.style.fontSize = 10;
+            btnLimparFiltro.style.width = 16;
+            if (ie7)
+            {
+                btnLimparFiltro.style.height = 13;
+                btnLimparFiltro.style.marginLeft = -17;
+                btnLimparFiltro.style.marginBottom = 2;
+                btnLimparFiltro.style.backgroundColor = 'white';
+            }
+            else
+            {
+                btnLimparFiltro.style.position = 'absolute';
+                btnLimparFiltro.style.marginLeft = -22;
+                btnLimparFiltro.style.marginTop = 2;
+                btnLimparFiltro.style.backgroundColor = 'transparent';
+            }
+            btnLimparFiltro.style.border = 0;
+            btnLimparFiltro.style.zIndex = 999;
+            btnLimparFiltro.onclick = function()
+            {
+                inputFiltro.value = '';
+                funcPesquisa();
+            };
+            spanFiltro.appendChild(document.createTextNode('Filtro: '));
+            spanFiltro.appendChild(inputFiltro);
+            spanFiltro.appendChild(btnLimparFiltro);
+
+            divCheckBoxes.appendChild(spanFiltro);
+        }
+        //busca todas checkboxes marcadas, e atualiza o texto do combo e o valor do input hidden
+        var atualizaTextoValor = function()
+        {
+            //popula o input com os elementos selecionados
+            var values = '';
+            var string = '';
+            for (var i = 0; i < checkboxes.length; i++)
+            {
+                if (checkboxes[i].checked === true)
+                {
+                    values += checkboxes[i].value + ';';
+                    string += checkboxes[i].getAttribute('descricao') + ', ';
+                }
+            }
+            if (string === '')
+            {
+                string = inputHidden.getAttribute('labelVazio');
+            }
+            else
+            {
+                values = values.substring(0, values.length - 1);
+                string = string.substring(0, string.length - 2);
+            }
+            inputHidden.value = values;
+            inputHidden.text = string;
+            inputText.value = string;
+            if ((string.length * 8) > inputHidden.getAttribute('intWidth'))
+            {
+                inputText.title = replaceAll(string, ', ', '\n');
+            }
+            else
+            {
+                inputText.removeAttribute('title');
+            }
+        };
+        var hoverIn = function()
+        {
+            this.style.backgroundColor = '#DEDEDE';
+            if (!ie7)
+            {
+                this.lastChild.style.color = 'black';
+            }
+        };
+        var hoverOut = function()
+        {
+            this.style.backgroundColor = 'white';
+            if (!ie7)
+            {
+                this.lastChild.style.color = '#5584a9';
+            }
+        };
+        var clickSpanCheck = function()
+        {
+            this.firstChild.click();
+        };
+        //cria checkboxes
+        inputHidden.adicionar = function(valor, texto, atributos)
+        {
+            if (valor === '')
+            {
+                inputHidden.setAttribute('labelVazio', texto);
+            }
+            else
+            {
+                texto = replaceAll(texto, '&amp;', '&'); texto = replaceAll(texto, '&lt;', '<'); texto = replaceAll(texto, '&gt;', '>');
+                var span = document.createElement('span');
+                span.style.whiteSpace = 'nowrap';
+                span.style.display = 'block';
+                span.onmouseover = hoverIn;
+                span.onmouseout = hoverOut;
+                span.onclick = clickSpanCheck;
+                var checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.style.height = '12px';
+                checkbox.style.marginBottom = 2;
+                checkbox.style.marginTop = 1;
+                checkbox.value = valor;
+                checkbox.id = combo.id + '_checkbox' + i;
+                checkbox.setAttribute('descricao', texto);
+                checkbox.setAttribute('upper', texto.toUpperCase() + valor);
+                checkbox.onclick = atualizaTextoValor;
+                for (var j = 0; j < atributos.length; j++)
+                {
+                    checkbox.setAttribute(atributos[j].chave, atributos[j].valor);
+                }
+                var label = document.createElement('label');
+                if (ie7)
+                {
+                    label.style.color = 'black';
+                }
+                else
+                {
+                    label.style.color = '#5584a9';
+                }
+                label.style.height = '11px';
+                label.style.fontFamily = 'Verdana';
+                label.style.fontSize = '12px';
+                label.innerHTML = texto;
+                span.appendChild(checkbox);
+                span.appendChild(label);
+                divCheckBoxes.appendChild(span);
+                checkboxes.push(checkbox);
+            }
+        };
+        for (var i = 0; i < combo.options.length; i++)
+        {
+            var atributos =[];
+            if (combo[i].getAttribute('atributos') !== null)
+            {
+                var nomeAtributos = combo[i].getAttribute('atributos').split(';');
+                for (var j = 0; j < nomeAtributos.length; j++)
+                {
+                    var valor = combo[i].getAttribute(nomeAtributos[j]);
+                    atributos.push(new objDic(nomeAtributos[j], valor));
+                }
+            }
+            inputHidden.adicionar(combo[i].value, combo[i].innerHTML, atributos);
+        }
+
+        if (combo.options.length > 30)
+        {
+            if (ie7)
+            {
+                divCheckBoxes.style.height = 420;
+            }
+            divCheckBoxes.style.overflowY = 'scroll';
+        }
+        inputHidden.setAttribute('opcoesVisiveis', combo.options.length);
+        divCheckBoxes.style.position = 'absolute';
+        divCheckBoxes.style.display = 'none';
+        divCheckBoxes.style.paddingRight = 1;
+        divCheckBoxes.style.overflowX = 'hidden';
+        if (ie7)
+        {
+            divCheckBoxes.style.borderRight = 'black 1px solid';
+            divCheckBoxes.style.borderBottom = 'black 1px solid';
+            divCheckBoxes.style.borderLeft = 'black 1px solid';
+        }
+        else
+        {
+            divCheckBoxes.style.borderRight = 'black 2px solid';
+            divCheckBoxes.style.borderBottom = 'black 2px solid';
+            divCheckBoxes.style.borderLeft = 'black 2px solid';
+            divCheckBoxes.style.padding = '0px 0px 0px 0px';
+        }
+        divCheckBoxes.style.backgroundColor = 'white';
+        divCheckBoxes.style.zIndex = '9999999';
+
+        inputHidden.value = '';
+        inputHidden.text = inputHidden.getAttribute('labelVazio');
+        inputText.value = inputHidden.getAttribute('labelVazio');
+        inputHidden.setarValores = function(valores)
+        {
+            var arr = valores.split(';');
+            for (var i = 0; i < arr.length; i++)
+            {
+                for (var j = 0; j < checkboxes.length; j++)
+                {
+                    if (!checkboxes[j].disabled && arr[i] === checkboxes[j].value)
+                    {
+                        checkboxes[j].checked = true;
+                    }
+                }
+            }
+            atualizaTextoValor();
+        };
+        inputHidden.limpar = function()
+        {
+            var valorInicial = inputHidden.value;
+            for (var i = 0; i < checkboxes.length; i++)
+            {
+                checkboxes[i].checked = false;
+            }
+            atualizaTextoValor();
+            if (inputHidden.onchange !== null && valorInicial !== '')
+            {
+                inputHidden.onchange();
+            }
+        };
+        inputHidden.desabilitar = function()
+        {
+            inputHidden.disabled = true;
+            inputText.disabled = true;
+            miniButton.disabled = true;
+            if (ie7)
+            {
+                inputText.style.backgroundColor = 'white';
+                miniButton.style.backgroundColor = 'white';
+                miniButton.style.border = 0;
+            }
+            else
+            {
+                inputText.style.backgroundColor = '#EBEBE4';
+                fakeComboDiv.style.backgroundColor = '#EBEBE4';
+                miniButton.style.color = '#949494';
+            }
+        };
+        inputHidden.habilitar = function()
+        {
+            inputHidden.disabled = false;
+            inputText.disabled = false;
+            miniButton.disabled = false;
+            if (ie7)
+            {
+                miniButton.style.backgroundColor = '#F0F0F0';
+                miniButton.style.borderTop = '#9f9fa0 1px solid';
+                miniButton.style.borderRight = '#696969 1px solid';
+                miniButton.style.borderBottom = '#696969 1px solid';
+                miniButton.style.borderLeft = '#9f9fa0 1px solid';
+            }
+            else
+            {
+                inputText.style.backgroundColor = 'white';
+                fakeComboDiv.style.backgroundColor = 'white';
+                miniButton.style.color = 'black';
+            }
+        };
+        inputHidden.removerTodos = function(labelVazio)
+        {
+            var selectTemp = document.createElement('select');
+            selectTemp.id = inputHidden.id;
+            var opt = document.createElement('option');
+            opt.value = '';
+            opt.innerHTML = inputHidden.getAttribute('labelVazio');
+            if (labelVazio !== undefined)
+            {
+                selectTemp.setAttribute('labelVazio', labelVazio);
+                opt.innerHTML = labelVazio;
+            }
+            selectTemp.appendChild(opt);
+            if (inputHidden.onchange)
+            {
+                selectTemp.onchange = inputHidden.onchange;
+            }
+            if (fakeComboDiv.getAttribute('tamanho') !== 'dinamico')
+            {
+                selectTemp.style.width = fakeComboDiv.style.width;
+            }
+            selectTemp.disabled = inputHidden.disabled === true;
+            fakeComboDiv.parentElement.insertBefore(selectTemp, fakeComboDiv);
+
+            divCheckBoxes.parentElement.removeChild(divCheckBoxes);
+            fakeComboDiv.parentElement.removeChild(fakeComboDiv);
+            transformaComboCheckBox(selectTemp.id);
+        };
+        inputHidden.filtrarAtributo = function(atrib, filtr)
+        {
+            var atributosFiltrados =[];
+            if (inputHidden.atributosFiltrados)
+            {
+                atributosFiltrados = inputHidden.atributosFiltrados.split(';');
+            }
+
+            if (filtr === '')
+            {
+                //remove atributo de atributosFiltrados
+                if (atributosFiltrados.length > 0)
+                {
+                    var acumAtrib = '';
+                    for (var i = 0; i < atributosFiltrados.length; i++)
+                    {
+                        var atributo = atributosFiltrados[i];
+                        if (atributo !== atrib)
+                        {
+                            acumAtrib += atributo + ';';
+                        }
+                    }
+                    if (acumAtrib !== '')
+                    {
+                        acumAtrib = acumAtrib.substring(0, acumAtrib.length - 1);
+                        inputHidden.atributosFiltrados = acumAtrib;
+                        atributosFiltrados = inputHidden.atributosFiltrados.split(';');
+                    }
+                    else
+                    {
+                        inputHidden.atributosFiltrados = '';
+                        atributosFiltrados =[];
+                    }
+                    inputHidden.removeAttribute('filtros_' + atrib);
+                }
+            }
+            else
+            {
+                filtr = filtr + '';
+                //adiciona atributo em atributosFiltrados
+                if (atributosFiltrados.length === 0)
+                {
+                    inputHidden.atributosFiltrados = atrib;
+                }
+                else
+                {
+                    var contemAtrib = false;
+                    for (var i = 0; i < atributosFiltrados.length; i++)
+                    {
+                        var atributo = atributosFiltrados[i];
+                        if (atributo === atrib)
+                        {
+                            contemAtrib = true;
+                            break;
+                        }
+                    }
+                    if (!contemAtrib)
+                    {
+                        inputHidden.atributosFiltrados += ';' + atrib;
+                    }
+                }
+                inputHidden.setAttribute('filtros_' + atrib, filtr);
+                atributosFiltrados = inputHidden.atributosFiltrados.split(';');
+            }
+            var qtdResultados = 0;
+            for (var i = 0; i < checkboxes.length; i++)
+            {
+                var achou = true;
+                for (var j = 0; j < atributosFiltrados.length; j++)
+                {
+                    var atributo = atributosFiltrados[j];
+                    var filtros = inputHidden.getAttribute('filtros_' + atributo);
+                    var arr = filtros.split(';');
+                    var achouFiltroAtributo = false; //achou o filtro para o determinado atributo
+                    for (var k = 0; k < arr.length; k++)
+                    {
+                        var filtro = arr[k];
+                        var atribValores = checkboxes[i].getAttribute(atributo);
+                        if (atribValores)
+                        {
+                            var arrAtrib = atribValores.split(';');
+                            for (var l = 0; l < arrAtrib.length; l++)
+                            {
+                                if (arrAtrib[l] === filtro)
+                                {
+                                    achouFiltroAtributo = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!achouFiltroAtributo)
+                    {
+                        achou = false;
+                        break;
+                    }
+                }
+                if (achou)
+                {
+                    checkboxes[i].disabled = false;
+                    checkboxes[i].parentElement.style.display = 'block';
+                    qtdResultados++;
+                }
+                else
+                {
+                    checkboxes[i].checked = false;
+                    checkboxes[i].disabled = true;
+                    checkboxes[i].parentElement.style.display = 'none';
+                }
+            }
+            atualizaTextoValor();
+            inputHidden.setAttribute('opcoesVisiveis', qtdResultados);
+        };
+        inputHidden.marcarAtributo = function(atributo, valores)
+        {
+            inputHidden.limpar();
+            if (valores)
+            {
+                var val = valores.split(';');
+                for (var j = 0; j < checkboxes.length; j++)
+                {
+                    for (var k = 0; k < val.length; k++)
+                    {
+                        if (!checkboxes[j].disabled && checkboxes[j].getAttribute(atributo) === val[k])
+                        {
+                            checkboxes[j].checked = true;
+                        }
+                    }
+                }
+                atualizaTextoValor();
+            }
+        };
+
+        combo.parentElement.insertBefore(fakeComboDiv, combo);
+        combo.parentElement.insertBefore(divCheckBoxes, combo);
+
+        if (combo.disabled === true)
+        {
+            inputHidden.desabilitar();
+        }
+        combo.parentElement.removeChild(combo);
+
+        if (document.addEventListener)
+        {
+            document.addEventListener('click', function(e)
+            {
+                var target = e.target ? e.target : e.srcElement;
+                if (divCheckBoxes.style.display === 'block' && !divCheckBoxes.contains(target) && !fakeComboDiv.contains(target))
+                {
+                    funcCloseDiv();
+                }
+            });
+        }
+        else if (document.attachEvent)
+        {
+            document.attachEvent('onclick', function(e)
+            {
+                var target = e.target ? e.target : e.srcElement;
+                if (divCheckBoxes.style.display === 'block' && !divCheckBoxes.contains(target) && !fakeComboDiv.contains(target))
+                {
+                    funcCloseDiv();
+                }
+            });
+        }
+
+    }
+    this.popularComboCheckbox = popularComboCheckbox;
+    function popularComboCheckbox(oXml, idCombo) {
+        var fakeComboDiv = document.getElementById(idCombo + '_fakediv');
+        var divCheckBoxes = document.getElementById(idCombo + '_divCheckboxes');
+        var inputHidden = document.getElementById(idCombo);
+
+        var selectTemp = document.createElement('select');
+        selectTemp.id = idCombo;
+        if (inputHidden.onchange)
+        {
+            selectTemp.onchange = inputHidden.onchange;
+        }
+        if (fakeComboDiv.getAttribute('tamanho') !== 'dinamico')
+        {
+            selectTemp.style.width = fakeComboDiv.style.width;
+        }
+        if (inputHidden.getAttribute('labelVazio') !== undefined)
+        {
+            selectTemp.setAttribute('labelVazio', inputHidden.getAttribute('labelVazio'));
+        }
+        if (inputHidden.getAttribute('filtro') !== undefined)
+        {
+            selectTemp.setAttribute('filtro', inputHidden.getAttribute('filtro'));
+        }
+
+        fakeComboDiv.parentElement.insertBefore(selectTemp, fakeComboDiv);
+
+        divCheckBoxes.parentElement.removeChild(divCheckBoxes);
+        fakeComboDiv.parentElement.removeChild(fakeComboDiv);
+
+        popularCombo(oXml, idCombo);
+
+        transformaComboCheckBox(idCombo);
+    }
+
+    /***
+    * Atualiza os dados de um combo com o retorno de um WebService, com mais atributos.
+    * oXml - XML com os dados
+    * sID - ID do combo no HTML
+    */
+    this.popularCombo = popularCombo;
+    function popularCombo(oXml, sID)
+    {
+        var oCombo = document.getElementById(sID);
+        if (!oCombo) {
+            throw new Error('getXmlUtil().popularCombo - O identificador informado não foi encontrado.');
+        }
+        var oLinhas;
+        if (oXml.getElementsByTagName('registrocontroles').length > 0)
+        {
+            oLinhas = oXml.getElementsByTagName('registrousuario_' + sID)[0].getElementsByTagName('linha');
+        }
+        else
+        {
+            oLinhas = oXml.getElementsByTagName('linha');
+        }
+        oCombo.innerHTML = '';
+
+        var sChave, sTexto, oLn;
+        for (var i = 0, imax = oLinhas.length; i < imax; i++)
+        {
+            oLn = oLinhas[i];
+            sChave = oLn.getAttribute('chave');
+            sTexto = oLn.getAttribute('valor') || sChave;
+            var opt = new Option(sTexto, sChave);
+            var atributos = '';
+            for (var j = 0; j < oLn.attributes.length; j++)
+            {
+                var key = oLn.attributes[j].name;
+                if (key !== 'chave' && key !== 'valor')
+                {
+                    opt.setAttribute(key, oLn.attributes[j].value);
+                    atributos += key + ';';
+                }
+
+            }
+            if (atributos.length > 0)
+            {
+                atributos = atributos.substring(0, atributos.length -1);
+                opt.setAttribute('atributos', atributos);
+            }
+            oCombo.options[i] = opt;
+        }
+
+        if (oCombo.options.length > 0) {
+            oCombo.selectedIndex = 0;
+        }
+
+        oCombo.style.visibility = 'visible';
+    }
+}
