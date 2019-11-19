@@ -1,12 +1,4 @@
-//um espeai necessita passar informaçao para o comando via  arquivo, mas este nao podera ser comprometido pelo inimigo
-//entao apos digitar o texto ele devera ser criptografado pelo espiao e descriptografado pelo comando
-//utilize um menu para realizar  as operações sobre o aqruivo
-//1- criar arquivo - apenas o espiao pode criar // se identifica ususari oe senha
-//struct senha.txt - nome, usuario, cpf, cargo , senha, data cadastro, informaco se ativo ou inativo
-// cargo - 1-comandante, 2 espiao, 3 admin
-//2 - criptografa msg - somente espiao criptografa
-//3 - descriptogrfa msg - somente comando
-//4 - atalizar senhas - somente adm atulizar ou criar senha
+
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
@@ -20,10 +12,21 @@ enum TipoCargo {
 	Administrador
 };
 
+enum AtivoInativo {
+	Ativo = 1,
+	Inativo
+};
+
+typedef struct DateTime {
+	int dia, mes, ano;
+}DateTime;
+
 typedef struct UsuarioLogado {
-	char nomeLogado[20], usuarioLogado[20], ativoInativoLogado;
+	char nomeLogado[20], usuarioLogado[20];
 	int cpfLogado, senhaLogado;
 	enum TipoCargo tipoCargoLogado;
+	enum AtivoInativo ativoInativo;
+	DateTime dateTime;
 }UsuarioLogado;
 
 void Arte();
@@ -32,17 +35,17 @@ void AtualizaSenhas();
 void CriarArquivo();
 int VerificaUsuario();
 void CadastraAdmin();
+void LerArquivo();
 
 int main() {
 
 	int opMenu = 1;
-	FILE *arqSenhas;
-	//arqSenhas = fopen("senha.txt", "at");
-	//fclose(arqSenhas);
-	CadastraAdmin();
-	do {
+	FILE* arqSenhas;
+	//CadastraAdmin();
+	do {	
 		Arte();
 		MotraMenu();
+		setbuf(stdin, NULL);
 		scanf("%d", &opMenu);
 		switch (opMenu)
 		{
@@ -50,13 +53,13 @@ int main() {
 			CriarArquivo();
 			break;
 		case 2:
+			LerArquivo();
 			break;
 		case 3:
-			break;
-		case 4:
+			system("cls");
 			AtualizaSenhas();
 			break;
-		case 5:
+		case 4:
 			break;
 		default:
 			printf("\nOpcao invalida, aperte uma tecla para continuar");
@@ -64,11 +67,12 @@ int main() {
 			system("cls");
 			break;
 		}
-	} while (opMenu != 5);
+	} while (opMenu != 4);
 
 }
 
-void Arte(){
+void Arte() {
+	printf("\n");
 	printf("**********   **********   **        **\n");
 	printf("**********   **********    **      **\n");
 	printf("***          **      **     **    ** \n");
@@ -86,60 +90,113 @@ void Arte(){
 void MotraMenu() {
 	printf("\n***************************************");
 	printf("\n*1 - Criar Mensagem                   *");
-	printf("\n*2 - Criptografar Mensagem            *");
-	printf("\n*3 - Ler Mensagem Criptografada       *");
-	printf("\n*4 - Atualizar Cadastro               *");
-	printf("\n*5 - Sair                             *");
+	printf("\n*2 - Ler Mensagem Criptografada       *");
+	printf("\n*3 - Atualizar Cadastro               *");
+	printf("\n*4 - Sair                             *");
 	printf("\n***************************************");
+	printf("\n");
 }
 
 void CriarArquivo() {
-	char login[20];
-	int senha;
-	printf("\nUsuario: ");
-	scanf("%s", login);
-	setbuf(stdin, NULL);
-	printf("\nSenha: ");
-	scanf("%d", &senha);
-	setbuf(stdin, NULL);
-	
-	UsuarioLogado usuarioLogado;
-	FILE *arqSenhas;
-	arqSenhas = fopen("senha.txt", "rt");
-	fread(&usuarioLogado, sizeof(UsuarioLogado), 1, arqSenhas);
+	system("cls");
+	int tipoCargo = VerificaUsuario();
 
-	if (strcmp(usuarioLogado.usuarioLogado, login) == 0) {
-		if (usuarioLogado.senhaLogado == senha) {
-			printf("OK");
+	if (tipoCargo != 2)
+	{
+		if (tipoCargo != 0) 
+		{
+			printf("\nUsuario invalido para operacao selecionada\nAperte qualquer tecla para continuar");
+			_getch();
+			system("cls");
 		}
 	}
-
-	fclose(arqSenhas);
+	else
+	{
+		FILE* arqMensagem;
+		arqMensagem = fopen("mensagem.txt", "wt");
+		char mensagem[100];
+		printf("\nEntre com a mensagem: ");
+		gets(mensagem);
+		for (int i = 0; i != strlen(mensagem); i++)
+		{
+			mensagem[i] = mensagem[i] + (i+1);
+		}
+		fprintf(arqMensagem, "%s", mensagem);
+		//system("cls");
+		printf("\nMensagem cadastrada\nAperte qualquer tecla para continuar");
+		_getch();
+		system("cls");
+		fclose(arqMensagem);
+	}
 }
 
 void AtualizaSenhas() {
-	
+
 	UsuarioLogado usuarioLogado;
-	FILE *arqSenhas;
+	FILE* arqSenhas;
 	arqSenhas = fopen("senha.txt", "at");
 
 	int tipoCargo = VerificaUsuario();
 
 	if (tipoCargo != 3)
 	{
-		printf("\nUsuario invalido para operacao selecionada\nAperte qualquer tecla para continuar");
-		_getch();
-		system("cls");
-		return;
+		if (tipoCargo != 0)
+		{
+			printf("\nUsuario invalido para operacao selecionada\nAperte qualquer tecla para continuar");
+			_getch();
+			system("cls");	
+		}
 	}
+	else
+	{
 
-	fwrite(&usuarioLogado, sizeof(UsuarioLogado), 1, arqSenhas);
-	fclose(arqSenhas);
+		printf("\nEntre com o seu NOME: ");
+		scanf("%s", usuarioLogado.nomeLogado);
+		setbuf(stdin, NULL);
+		printf("\nEntre com o seu LOGIN: ");
+		scanf("%s", usuarioLogado.usuarioLogado);
+		setbuf(stdin, NULL);
+		printf("\nEntre com o seu CPF: ");
+		scanf("%d", &usuarioLogado.cpfLogado);
+		setbuf(stdin, NULL);
+		do
+		{
+			printf("\nEntre com o seu CARGO: ");
+			scanf("%d", &usuarioLogado.tipoCargoLogado);
+			setbuf(stdin, NULL);
+			if (usuarioLogado.tipoCargoLogado != 1 && usuarioLogado.tipoCargoLogado != 2 && usuarioLogado.tipoCargoLogado != 3)
+			{
+				printf("\nCargo Invalido");
+			}
+		} while (usuarioLogado.tipoCargoLogado != 1 && usuarioLogado.tipoCargoLogado != 2 && usuarioLogado.tipoCargoLogado != 3);
+		printf("\nEntre com o sua SENHA: ");
+		scanf("%d", &usuarioLogado.senhaLogado);
+		setbuf(stdin, NULL);
+		printf("\nEntre com a DATA DE CADASTRO:(dia/mes/ano) ");
+		scanf("%d", &usuarioLogado.dateTime.dia);
+		setbuf(stdin, NULL);
+		scanf("%d", &usuarioLogado.dateTime.mes);
+		setbuf(stdin, NULL);
+		scanf("%d", &usuarioLogado.dateTime.ano);
+		setbuf(stdin, NULL);
+		do {
+			printf("\nAtivo ou Inativo(1/0) ");
+			scanf("%d", &usuarioLogado.ativoInativo);
+			setbuf(stdin, NULL);
+			if (usuarioLogado.ativoInativo != 1 && usuarioLogado.ativoInativo != 0)
+			{
+				printf("Tipo invalido");
+			}
+		} while (usuarioLogado.ativoInativo != 1 && usuarioLogado.ativoInativo != 0);
+
+		fwrite(&usuarioLogado, sizeof(UsuarioLogado), 1, arqSenhas);
+		fclose(arqSenhas);
+	}
 }
 
 int VerificaUsuario() {
 	UsuarioLogado usuarioLogado;
-	FILE *arqSenhas;
+	FILE* arqSenhas;
 	arqSenhas = fopen("senha.txt", "rt");
 
 	char login[20];
@@ -151,32 +208,81 @@ int VerificaUsuario() {
 	scanf("%d", &senha);
 	setbuf(stdin, NULL);
 
-	fread(&usuarioLogado, sizeof(UsuarioLogado), 1, arqSenhas);
+	while (!feof(arqSenhas)) {
+		fread(&usuarioLogado, sizeof(UsuarioLogado), 1, arqSenhas);
+		if ((strcmp(usuarioLogado.usuarioLogado, login) == 0) && (usuarioLogado.senhaLogado == senha))
+		{
+			switch (usuarioLogado.tipoCargoLogado)
+			{
+			case 1:
+				printf("\nBem vindo Comandante");
+				fclose(arqSenhas);
+				return 1;
+			case 2:
+				printf("\nBem vindo Espiao");
+				fclose(arqSenhas);
+				return 2;
+			case 3:
+				printf("\nBem vindo Administrador");
+				fclose(arqSenhas);
+				return 3;
+			default:
+				return 0;
+			}
+		}	
+	}
+	printf("\nUsuario/Senha invalido(s)\nAperte qualquer tecla para continuar");
+	_getch();
+	system("cls");
+	fclose(arqSenhas);
+	return 0;
+}
 
-	switch (usuarioLogado.tipoCargoLogado)
+void LerArquivo() {
+	system("cls");
+	int tipoCargo = VerificaUsuario();
+
+	if (tipoCargo != 1)
 	{
-	case 1:
-		printf("\nBem vindo Comandante");
-		break;
-	case 2:
-		printf("\nBem vindo Espiao");
-		break;
-	case 3:
-		printf("\nBem vindo Administrador");
-		break;
-	default:
-		break;
+		if (tipoCargo != 0)
+		{
+			printf("\nUsuario invalido para operacao selecionada\nAperte qualquer tecla para continuar");
+			_getch();
+			system("cls");
+		}
+	}
+	else
+	{
+		FILE* arqMensagem;
+		arqMensagem = fopen("mensagem.txt", "rt");
+		char c, formtado[100];
+		int numeroCaracter = 0;
+		printf("\nMensagem: ");
+		for(int i = 0; !feof(arqMensagem); i++)
+		{ 
+			fscanf(arqMensagem, "%c", &c);
+			formtado[i] = c - (i + 1);
+			numeroCaracter++;
+		}
+		for (int i = 0; i != numeroCaracter - 1; i++)
+		{
+			printf("%c", formtado[i]);
+		}
+		printf("\nAperte qualquer tecla para continuar");
+		_getch();
+		system("cls");
+		fclose(arqMensagem);
 	}
 }
 
 void CadastraAdmin() {
 	UsuarioLogado usuarioLogado;
-	FILE *arqSenhas;
+	FILE* arqSenhas;
 	arqSenhas = fopen("senha.txt", "at");
 
 	strcpy(usuarioLogado.nomeLogado, "Admin");
 	strcpy(usuarioLogado.usuarioLogado, "admin");
-	usuarioLogado.ativoInativoLogado = 'S';
+	usuarioLogado.ativoInativo = 1;
 	usuarioLogado.cpfLogado = 191;
 	usuarioLogado.senhaLogado = 123;
 	usuarioLogado.tipoCargoLogado = 3;
