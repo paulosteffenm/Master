@@ -1,5 +1,0 @@
-﻿  Origem.c
-C:\Paulo\c margrit\Project1\Project1\Origem.c(59,10): warning C4013: 'system' indefinido; assumindo extern retornando int
-C:\Paulo\c margrit\Project1\Project1\Origem.c(43,8): warning C4101: 'arqSenhas': variável local não referenciada
-C:\Paulo\c margrit\Project1\Project1\Origem.c(119,7): warning C4013: 'gets' indefinido; assumindo extern retornando int
-  Project1.vcxproj -> C:\Paulo\c margrit\Project1\Debug\Project1.exe

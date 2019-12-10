@@ -1,0 +1,32 @@
+{
+  "development": {
+    "username": "siepex",
+    "password": "uergs@2019",
+    "database": "siepex",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "define": {
+      "timestamps": false
+    }
+  },
+  "test": {
+    "username": "siepex",
+    "password": "uergs@2019",
+    "database": "siepex",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "define": {
+      "timestamps": false
+    }
+  },
+  "production": {
+    "username": "siepex",
+    "password": "uergs@2019",
+    "database": "siepex",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "define": {
+      "timestamps": false
+    }
+  }
+}
